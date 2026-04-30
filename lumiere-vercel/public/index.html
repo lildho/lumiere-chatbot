@@ -1,0 +1,890 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Lumière Beauty Clinic</title>
+
+  <!-- Google Fonts: Cormorant Garamond (display elegan) + DM Sans (body bersih) -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+
+  <style>
+    /* =========================================================
+       CSS VARIABLES — Ubah warna tema klinik Anda di sini
+       ========================================================= */
+    :root {
+      --brand-cream:       #faf7f4;
+      --brand-rose:        #c9a99a;
+      --brand-rose-dark:   #b08878;
+      --brand-gold:        #c4a882;
+      --brand-gold-light:  #e8d9c7;
+      --brand-charcoal:    #2c2825;
+      --brand-warm-gray:   #8a7f78;
+      --brand-white:       #ffffff;
+
+      --chat-bubble-user:  #2c2825;
+      --chat-bubble-ai:    #f5f0eb;
+
+      --shadow-soft:       0 8px 32px rgba(44, 40, 37, 0.12);
+      --shadow-float:      0 20px 60px rgba(44, 40, 37, 0.20);
+      --radius-bubble:     1.2rem;
+      --radius-widget:     1.5rem;
+
+      --font-display:      'Cormorant Garamond', Georgia, serif;
+      --font-body:         'DM Sans', sans-serif;
+
+      --widget-width:      380px;
+      --widget-height:     580px;
+    }
+
+    /* =========================================================
+       DEMO PAGE BACKGROUND (bukan bagian widget — hanya demo)
+       ========================================================= */
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--brand-cream);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .demo-page {
+      text-align: center;
+      color: var(--brand-charcoal);
+    }
+
+    .demo-page h1 {
+      font-family: var(--font-display);
+      font-size: 3rem;
+      font-weight: 400;
+      letter-spacing: 0.05em;
+      margin-bottom: 0.5rem;
+    }
+
+    .demo-page p {
+      color: var(--brand-warm-gray);
+      font-size: 0.9rem;
+      font-weight: 300;
+    }
+
+    /* =========================================================
+       FLOATING BUTTON — Tombol chat di pojok kanan bawah
+       ========================================================= */
+    #chat-toggle-btn {
+      position: fixed;
+      bottom: 28px;
+      right: 28px;
+      width: 62px;
+      height: 62px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-charcoal) 0%, #4a3f38 100%);
+      border: 2px solid var(--brand-gold);
+      cursor: pointer;
+      box-shadow: var(--shadow-float);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+      z-index: 9998;
+    }
+
+    #chat-toggle-btn:hover {
+      transform: scale(1.08);
+      box-shadow: 0 24px 64px rgba(44, 40, 37, 0.28);
+    }
+
+    /* Ikon chat / close di dalam tombol */
+    #chat-toggle-btn .icon-chat,
+    #chat-toggle-btn .icon-close {
+      position: absolute;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }
+
+    #chat-toggle-btn .icon-close {
+      opacity: 0;
+      transform: rotate(-90deg) scale(0.6);
+    }
+
+    /* Saat widget terbuka, ganti ikon */
+    #chat-toggle-btn.is-open .icon-chat {
+      opacity: 0;
+      transform: rotate(90deg) scale(0.6);
+    }
+
+    #chat-toggle-btn.is-open .icon-close {
+      opacity: 1;
+      transform: rotate(0deg) scale(1);
+    }
+
+    /* Badge notifikasi (opsional) */
+    .notification-dot {
+      position: absolute;
+      top: 4px;
+      right: 4px;
+      width: 12px;
+      height: 12px;
+      background: var(--brand-rose);
+      border-radius: 50%;
+      border: 2px solid var(--brand-cream);
+      animation: pulse-dot 2s infinite;
+    }
+
+    @keyframes pulse-dot {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50%       { transform: scale(1.3); opacity: 0.7; }
+    }
+
+    /* =========================================================
+       CHAT WIDGET — Jendela chat utama
+       ========================================================= */
+    #chat-widget {
+      position: fixed;
+      bottom: 104px;
+      right: 28px;
+      width: var(--widget-width);
+      height: var(--widget-height);
+      background: var(--brand-white);
+      border-radius: var(--radius-widget);
+      box-shadow: var(--shadow-float);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 9997;
+
+      /* State: tersembunyi */
+      opacity: 0;
+      transform: translateY(20px) scale(0.96);
+      pointer-events: none;
+      transition: opacity 0.35s cubic-bezier(0.4, 0, 0.2, 1),
+                  transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    #chat-widget.is-visible {
+      opacity: 1;
+      transform: translateY(0) scale(1);
+      pointer-events: all;
+    }
+
+    /* ---- HEADER ---- */
+    .chat-header {
+      background: linear-gradient(135deg, var(--brand-charcoal) 0%, #3d322c 100%);
+      padding: 18px 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      flex-shrink: 0;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Dekorasi latar header */
+    .chat-header::before {
+      content: '';
+      position: absolute;
+      top: -30px;
+      right: -20px;
+      width: 120px;
+      height: 120px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(196, 168, 130, 0.15) 0%, transparent 70%);
+    }
+
+    /* Avatar / foto agen */
+    .agent-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-gold) 0%, var(--brand-rose) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      font-size: 1.3rem;
+      border: 2px solid rgba(255,255,255,0.15);
+    }
+
+    .agent-info { flex: 1; }
+
+    .agent-name {
+      font-family: var(--font-display);
+      font-size: 1.15rem;
+      font-weight: 500;
+      color: var(--brand-white);
+      letter-spacing: 0.03em;
+      line-height: 1;
+      margin-bottom: 3px;
+    }
+
+    .agent-status {
+      font-size: 0.72rem;
+      color: var(--brand-gold-light);
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      background: #7bd4a4;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .header-tagline {
+      font-family: var(--font-display);
+      font-style: italic;
+      font-size: 0.75rem;
+      color: rgba(196, 168, 130, 0.7);
+      letter-spacing: 0.06em;
+    }
+
+    /* ---- MESSAGES AREA ---- */
+    .chat-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      background: var(--brand-cream);
+    }
+
+    /* Scrollbar elegan */
+    .chat-messages::-webkit-scrollbar { width: 4px; }
+    .chat-messages::-webkit-scrollbar-track { background: transparent; }
+    .chat-messages::-webkit-scrollbar-thumb {
+      background: var(--brand-gold-light);
+      border-radius: 4px;
+    }
+
+    /* Satu baris pesan (pembungkus) */
+    .message-row {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      animation: msg-appear 0.35s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+    }
+
+    @keyframes msg-appear {
+      from { opacity: 0; transform: translateY(10px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* Pesan dari AI (kiri) */
+    .message-row.ai { justify-content: flex-start; }
+    .message-row.user { justify-content: flex-end; }
+
+    /* Avatar kecil AI di sebelah bubble */
+    .msg-avatar {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-gold) 0%, var(--brand-rose) 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 0.85rem;
+      flex-shrink: 0;
+    }
+
+    /* Bubble pesan */
+    .message-bubble {
+      max-width: 78%;
+      padding: 11px 15px;
+      border-radius: var(--radius-bubble);
+      font-size: 0.875rem;
+      line-height: 1.55;
+      font-weight: 400;
+    }
+
+    .message-row.ai .message-bubble {
+      background: var(--chat-bubble-ai);
+      color: var(--brand-charcoal);
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(196, 168, 130, 0.2);
+    }
+
+    .message-row.user .message-bubble {
+      background: var(--chat-bubble-user);
+      color: var(--brand-white);
+      border-bottom-right-radius: 4px;
+    }
+
+    /* Timestamp kecil di bawah bubble */
+    .msg-time {
+      font-size: 0.65rem;
+      color: var(--brand-warm-gray);
+      padding: 2px 4px;
+      align-self: flex-end;
+      flex-shrink: 0;
+    }
+
+    /* ---- TYPING INDICATOR (animasi titik-titik) ---- */
+    .typing-indicator {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 2px 0;
+    }
+
+    .typing-dots {
+      display: flex;
+      gap: 4px;
+      padding: 10px 14px;
+      background: var(--chat-bubble-ai);
+      border-radius: var(--radius-bubble);
+      border-bottom-left-radius: 4px;
+      border: 1px solid rgba(196, 168, 130, 0.2);
+    }
+
+    .typing-dots span {
+      width: 6px;
+      height: 6px;
+      background: var(--brand-warm-gray);
+      border-radius: 50%;
+      animation: bounce-dot 1.4s infinite ease-in-out;
+    }
+
+    .typing-dots span:nth-child(2) { animation-delay: 0.2s; }
+    .typing-dots span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce-dot {
+      0%, 80%, 100% { transform: translateY(0); opacity: 0.4; }
+      40%           { transform: translateY(-5px); opacity: 1; }
+    }
+
+    /* Sembunyikan typing indicator saat tidak aktif */
+    #typing-indicator { display: none; }
+    #typing-indicator.is-visible { display: flex; }
+
+    /* ---- QUICK REPLIES (tombol cepat opsional) ---- */
+    .quick-replies {
+      padding: 8px 16px 4px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      background: var(--brand-cream);
+      flex-shrink: 0;
+    }
+
+    .quick-reply-btn {
+      background: transparent;
+      border: 1px solid var(--brand-gold);
+      color: var(--brand-charcoal);
+      border-radius: 20px;
+      padding: 5px 13px;
+      font-size: 0.78rem;
+      font-family: var(--font-body);
+      cursor: pointer;
+      transition: all 0.2s ease;
+      white-space: nowrap;
+    }
+
+    .quick-reply-btn:hover {
+      background: var(--brand-charcoal);
+      border-color: var(--brand-charcoal);
+      color: var(--brand-white);
+      transform: translateY(-1px);
+    }
+
+    /* ---- INPUT AREA ---- */
+    .chat-input-area {
+      padding: 14px 16px;
+      background: var(--brand-white);
+      border-top: 1px solid rgba(196, 168, 130, 0.2);
+      display: flex;
+      align-items: flex-end;
+      gap: 10px;
+      flex-shrink: 0;
+    }
+
+    #user-input {
+      flex: 1;
+      border: 1.5px solid var(--brand-gold-light);
+      border-radius: 24px;
+      padding: 10px 16px;
+      font-family: var(--font-body);
+      font-size: 0.875rem;
+      color: var(--brand-charcoal);
+      background: var(--brand-cream);
+      resize: none;
+      max-height: 100px;
+      overflow-y: auto;
+      line-height: 1.4;
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
+      outline: none;
+    }
+
+    #user-input::placeholder { color: var(--brand-warm-gray); }
+
+    #user-input:focus {
+      border-color: var(--brand-rose);
+      box-shadow: 0 0 0 3px rgba(201, 169, 154, 0.15);
+    }
+
+    /* Tombol kirim */
+    #send-btn {
+      width: 42px;
+      height: 42px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--brand-charcoal) 0%, #4a3f38 100%);
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), opacity 0.2s ease;
+    }
+
+    #send-btn:hover { transform: scale(1.1); }
+    #send-btn:active { transform: scale(0.95); }
+    #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+    /* ---- FOOTER KECIL ---- */
+    .chat-footer {
+      padding: 6px 16px 10px;
+      text-align: center;
+      font-size: 0.65rem;
+      color: var(--brand-warm-gray);
+      background: var(--brand-white);
+      letter-spacing: 0.04em;
+    }
+
+    /* =========================================================
+       RESPONSIVE — Tampilan mobile
+       ========================================================= */
+    @media (max-width: 480px) {
+      #chat-widget {
+        bottom: 0;
+        right: 0;
+        width: 100%;
+        height: 100dvh;
+        border-radius: 0;
+        border-top-left-radius: var(--radius-widget);
+        border-top-right-radius: var(--radius-widget);
+      }
+
+      #chat-toggle-btn {
+        bottom: 20px;
+        right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- ============================================================
+       DEMO PAGE CONTENT (ganti dengan konten website Anda)
+       ============================================================ -->
+  <div class="demo-page">
+    <h1>Lumière Beauty Clinic</h1>
+    <p>Glow from Within &nbsp;✨&nbsp; Jakarta Selatan</p>
+  </div>
+
+  <!-- ============================================================
+       FLOATING TOGGLE BUTTON
+       ============================================================ -->
+  <button id="chat-toggle-btn" aria-label="Buka chat asisten klinik" title="Chat dengan Lumière AI">
+    <!-- Ikon chat (tampil saat widget tertutup) -->
+    <svg class="icon-chat" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e8d9c7" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    </svg>
+    <!-- Ikon X (tampil saat widget terbuka) -->
+    <svg class="icon-close" xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e8d9c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+    <!-- Badge notifikasi merah kecil -->
+    <span class="notification-dot" id="notification-dot"></span>
+  </button>
+
+  <!-- ============================================================
+       CHAT WIDGET
+       ============================================================ -->
+  <div id="chat-widget" role="dialog" aria-label="Chat Asisten Lumière" aria-hidden="true">
+
+    <!-- HEADER -->
+    <div class="chat-header">
+      <div class="agent-avatar">✨</div>
+      <div class="agent-info">
+        <div class="agent-name">Lumière</div>
+        <div class="agent-status">
+          <span class="status-dot"></span>
+          Asisten AI &mdash; Online
+        </div>
+      </div>
+      <div class="header-tagline">Glow from Within</div>
+    </div>
+
+    <!-- MESSAGES AREA -->
+    <div class="chat-messages" id="chat-messages" aria-live="polite" aria-label="Percakapan">
+      <!-- Pesan-pesan akan ditambahkan oleh JavaScript -->
+    </div>
+
+    <!-- TYPING INDICATOR -->
+    <div class="message-row ai" id="typing-indicator" aria-label="Lumière sedang mengetik">
+      <div class="msg-avatar">✨</div>
+      <div class="typing-dots">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+
+    <!-- QUICK REPLIES -->
+    <div class="quick-replies" id="quick-replies">
+      <button class="quick-reply-btn" data-msg="Apa saja layanan yang tersedia?">Layanan ✨</button>
+      <button class="quick-reply-btn" data-msg="Berapa harga HydraFacial?">Harga 💆</button>
+      <button class="quick-reply-btn" data-msg="Saya ingin booking jadwal">Booking 📅</button>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="chat-input-area">
+      <textarea
+        id="user-input"
+        placeholder="Ketik pesan Anda..."
+        rows="1"
+        aria-label="Kolom input pesan"
+        maxlength="500"
+      ></textarea>
+      <button id="send-btn" aria-label="Kirim pesan" disabled>
+        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e8d9c7" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="chat-footer">
+      Powered by Lumière AI &nbsp;·&nbsp; Lumière Beauty Clinic © 2025
+    </div>
+
+  </div><!-- #chat-widget -->
+
+  <!-- ============================================================
+       JAVASCRIPT — Logika Chat Widget
+       ============================================================ -->
+  <script>
+    /**
+     * ================================================================
+     * LUMIÈRE CHAT WIDGET — JavaScript
+     * ================================================================
+     * Konfigurasi:
+     *   - BACKEND_URL: Ganti dengan URL server FastAPI Anda
+     *   - WELCOME_MESSAGE: Pesan pertama yang muncul saat widget dibuka
+     * ================================================================
+     */
+
+    // ------------------------------------------------------------------
+    // KONFIGURASI — Sesuaikan di sini
+    // ------------------------------------------------------------------
+    const CONFIG = {
+      // URL backend FastAPI Anda
+      BACKEND_URL: '/api/chat',  // Vercel: same domain, tidak perlu CORS
+
+      // Pesan sambutan yang muncul otomatis saat widget pertama dibuka
+      WELCOME_MESSAGE:
+        'Selamat datang di Lumière Beauty Clinic ✨\n\n' +
+        'Saya Lumière, asisten virtual Anda. Saya siap membantu menjawab pertanyaan seputar ' +
+        'layanan kami, harga, dan membantu Anda membuat jadwal treatment.\n\n' +
+        'Ada yang bisa saya bantu hari ini?',
+
+      // Berapa milidetik sebelum welcome message muncul otomatis
+      WELCOME_DELAY_MS: 800,
+    };
+
+    // ------------------------------------------------------------------
+    // STATE APLIKASI
+    // ------------------------------------------------------------------
+    const state = {
+      sessionId: generateSessionId(),    // ID unik sesi ini
+      history: [],                        // Riwayat percakapan
+      isLoading: false,                   // Sedang menunggu respons?
+      widgetOpen: false,                  // Widget sedang terbuka?
+      hasShownWelcome: false,             // Sudah tampil welcome?
+    };
+
+    // ------------------------------------------------------------------
+    // REFERENSI ELEMEN DOM
+    // ------------------------------------------------------------------
+    const DOM = {
+      toggleBtn:    document.getElementById('chat-toggle-btn'),
+      widget:       document.getElementById('chat-widget'),
+      messages:     document.getElementById('chat-messages'),
+      typingRow:    document.getElementById('typing-indicator'),
+      quickReplies: document.getElementById('quick-replies'),
+      input:        document.getElementById('user-input'),
+      sendBtn:      document.getElementById('send-btn'),
+      notifDot:     document.getElementById('notification-dot'),
+    };
+
+    // ------------------------------------------------------------------
+    // UTILITAS
+    // ------------------------------------------------------------------
+
+    /** Buat session ID unik untuk sesi ini. */
+    function generateSessionId() {
+      return 'sess_' + Math.random().toString(36).slice(2, 11) + '_' + Date.now();
+    }
+
+    /** Dapatkan waktu saat ini dalam format HH:MM. */
+    function getCurrentTime() {
+      return new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    /** Auto-resize textarea sesuai konten. */
+    function autoResizeTextarea() {
+      DOM.input.style.height = 'auto';
+      DOM.input.style.height = Math.min(DOM.input.scrollHeight, 100) + 'px';
+    }
+
+    /** Scroll ke pesan terbaru. */
+    function scrollToBottom() {
+      requestAnimationFrame(() => {
+        DOM.messages.scrollTo({ top: DOM.messages.scrollHeight, behavior: 'smooth' });
+      });
+    }
+
+    // ------------------------------------------------------------------
+    // RENDER PESAN
+    // ------------------------------------------------------------------
+
+    /**
+     * Tambahkan satu baris pesan ke area chat.
+     * @param {string} text   - Isi pesan
+     * @param {'ai'|'user'} role - Pengirim pesan
+     */
+    function appendMessage(text, role) {
+      const row = document.createElement('div');
+      row.className = `message-row ${role}`;
+
+      const time = document.createElement('span');
+      time.className = 'msg-time';
+      time.textContent = getCurrentTime();
+
+      const bubble = document.createElement('div');
+      bubble.className = 'message-bubble';
+
+      // Render baris baru dalam pesan AI sebagai <br>
+      // Gunakan textContent untuk user (mencegah XSS), innerHTML untuk AI (aman karena dari API kita)
+      if (role === 'ai') {
+        bubble.innerHTML = escapeHtml(text).replace(/\n/g, '<br>');
+      } else {
+        bubble.textContent = text;
+      }
+
+      if (role === 'ai') {
+        const avatar = document.createElement('div');
+        avatar.className = 'msg-avatar';
+        avatar.textContent = '✨';
+        row.appendChild(avatar);
+        row.appendChild(bubble);
+        row.appendChild(time);
+      } else {
+        row.appendChild(time);
+        row.appendChild(bubble);
+      }
+
+      // Insert sebelum typing indicator
+      DOM.messages.insertBefore(row, DOM.typingRow);
+      scrollToBottom();
+    }
+
+    /** Escape karakter HTML untuk mencegah XSS dari input user. */
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;');
+    }
+
+    // ------------------------------------------------------------------
+    // TYPING INDICATOR
+    // ------------------------------------------------------------------
+
+    function showTyping() {
+      DOM.typingRow.classList.add('is-visible');
+      scrollToBottom();
+    }
+
+    function hideTyping() {
+      DOM.typingRow.classList.remove('is-visible');
+    }
+
+    // ------------------------------------------------------------------
+    // QUICK REPLIES
+    // ------------------------------------------------------------------
+
+    // Pasang event listener ke semua tombol quick reply
+    document.querySelectorAll('.quick-reply-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const msg = btn.getAttribute('data-msg');
+        if (msg && !state.isLoading) {
+          // Sembunyikan quick replies setelah digunakan (opsional)
+          DOM.quickReplies.style.display = 'none';
+          sendMessage(msg);
+        }
+      });
+    });
+
+    // ------------------------------------------------------------------
+    // KIRIM PESAN
+    // ------------------------------------------------------------------
+
+    /**
+     * Proses pengiriman pesan user ke backend.
+     * @param {string} [overrideText] - Teks override (dari quick reply)
+     */
+    async function sendMessage(overrideText) {
+      const text = (overrideText || DOM.input.value).trim();
+      if (!text || state.isLoading) return;
+
+      // Tampilkan pesan user di UI
+      appendMessage(text, 'user');
+
+      // Update history lokal
+      state.history.push({ role: 'user', content: text });
+
+      // Reset input
+      if (!overrideText) {
+        DOM.input.value = '';
+        DOM.input.style.height = 'auto';
+      }
+
+      // Set loading state
+      state.isLoading = true;
+      DOM.sendBtn.disabled = true;
+      showTyping();
+
+      try {
+        // Kirim ke backend FastAPI
+        const response = await fetch(CONFIG.BACKEND_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            session_id: state.sessionId,
+            message: text,
+            history: state.history.slice(0, -1), // Kirim history tanpa pesan terakhir (sudah di 'message')
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const data = await response.json();
+        const reply = data.reply || 'Maaf, saya tidak dapat memproses permintaan Anda saat ini.';
+
+        // Tampilkan respons AI
+        hideTyping();
+        appendMessage(reply, 'ai');
+
+        // Simpan respons ke history
+        state.history.push({ role: 'assistant', content: reply });
+
+        // Jika ada booking baru, tampilkan notifikasi opsional
+        if (data.booking_created) {
+          console.log('Booking baru dibuat:', data.booking_created);
+          // Opsional: tambahkan konfetti, sound, dll.
+        }
+
+      } catch (error) {
+        hideTyping();
+        console.error('Error mengirim pesan:', error);
+
+        // Tampilkan pesan error yang ramah
+        appendMessage(
+          'Maaf, ada gangguan koneksi saat ini. Silakan coba lagi sebentar, ' +
+          'atau hubungi kami langsung di +62 812-3456-7890 🌿',
+          'ai'
+        );
+      } finally {
+        state.isLoading = false;
+        updateSendButton();
+        DOM.input.focus();
+      }
+    }
+
+    // ------------------------------------------------------------------
+    // WELCOME MESSAGE
+    // ------------------------------------------------------------------
+
+    function showWelcomeMessage() {
+      if (state.hasShownWelcome) return;
+      state.hasShownWelcome = true;
+
+      // Tambahkan ke history agar agent tahu konteks awal
+      state.history.push({ role: 'assistant', content: CONFIG.WELCOME_MESSAGE });
+
+      setTimeout(() => {
+        showTyping();
+        setTimeout(() => {
+          hideTyping();
+          appendMessage(CONFIG.WELCOME_MESSAGE, 'ai');
+        }, 1000);
+      }, CONFIG.WELCOME_DELAY_MS);
+    }
+
+    // ------------------------------------------------------------------
+    // TOGGLE WIDGET BUKA / TUTUP
+    // ------------------------------------------------------------------
+
+    function toggleWidget() {
+      state.widgetOpen = !state.widgetOpen;
+
+      DOM.widget.classList.toggle('is-visible', state.widgetOpen);
+      DOM.toggleBtn.classList.toggle('is-open', state.widgetOpen);
+      DOM.widget.setAttribute('aria-hidden', !state.widgetOpen);
+
+      // Sembunyikan badge saat widget dibuka
+      if (state.widgetOpen) {
+        DOM.notifDot.style.display = 'none';
+        showWelcomeMessage();
+        setTimeout(() => DOM.input.focus(), 400);
+      }
+    }
+
+    DOM.toggleBtn.addEventListener('click', toggleWidget);
+
+    // ------------------------------------------------------------------
+    // INPUT HANDLING
+    // ------------------------------------------------------------------
+
+    function updateSendButton() {
+      DOM.sendBtn.disabled = DOM.input.value.trim() === '' || state.isLoading;
+    }
+
+    DOM.input.addEventListener('input', () => {
+      autoResizeTextarea();
+      updateSendButton();
+    });
+
+    // Kirim dengan Enter (tanpa Shift)
+    DOM.input.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        if (!DOM.sendBtn.disabled) sendMessage();
+      }
+    });
+
+    DOM.sendBtn.addEventListener('click', () => sendMessage());
+
+    // ------------------------------------------------------------------
+    // INISIALISASI
+    // ------------------------------------------------------------------
+    console.log(
+      '%cLumière Beauty Clinic AI Widget v1.0',
+      'color: #c4a882; font-weight: bold; font-size: 14px;'
+    );
+    console.log('Session ID:', state.sessionId);
+  </script>
+
+</body>
+</html>
