@@ -527,13 +527,13 @@
     <!-- MESSAGES AREA -->
     <div class="chat-messages" id="chat-messages" aria-live="polite" aria-label="Percakapan">
       <!-- Pesan-pesan akan ditambahkan oleh JavaScript -->
-    </div>
 
-    <!-- TYPING INDICATOR -->
-    <div class="message-row ai" id="typing-indicator" aria-label="Lumière sedang mengetik">
-      <div class="msg-avatar">✨</div>
-      <div class="typing-dots">
-        <span></span><span></span><span></span>
+      <!-- TYPING INDICATOR — harus di dalam chat-messages agar insertBefore() berfungsi -->
+      <div class="message-row ai" id="typing-indicator" aria-label="Lumière sedang mengetik">
+        <div class="msg-avatar">✨</div>
+        <div class="typing-dots">
+          <span></span><span></span><span></span>
+        </div>
       </div>
     </div>
 
